@@ -1,48 +1,65 @@
 # Networking Lecture Notes
+Matt Terwilliger | mterwil@umich.edu
 
-For EECS 398 (Computing for Computer Scientists) lecture on 4/15/16.
+For University of Michigan's EECS 398 (Computing for Computer Scientists)
+lecture on 4/15/16. Note this is by no means complete and oversimplifies some
+processes for clarity. It does, however, provide an accurate high-level overview
+of important networking concepts.
+
+Recording available at http://leccap.engin.umich.edu/leccap/viewer/r/WNFhEi
 
 Jumping off point: what happens when you type google.com in your browser?
 
 ## Request
-Our browser generates a request to Google. This contains key information like
-what page we want and on which protocol we are communicating. The request heads
-out over a TCP port (more on this later).
+Our browser generates a request to Google's servers. This contains key
+information like what page we want and on which protocol we are communicating.
+The request heads out over a TCP port (more on this later).
+
+## We can have a server too!
+
+    cd Desktop
+    mkdir website
+    echo "Hi c4cs!" > index.html
+    python -m SimpleHTTPServer
+
+- Listening on 0.0.0.0 means every available network interface
+- 8000 is the port. If you visit this in a browser it won't work unless you
+  specify the port. Why? Convention.
+- Lesson: just because you have a valid IP/DNS name doesn't mean you can type it
+  into the web browser and have it work.
 
 ## DNS translation
-Your operating system attempts to translate google.com into an IP address.  By
-checking your system DNS server: `cat /etc/resolv.conf`
-
-Aside: if you query different DNS servers for something like google.com you'll
-get different results. Benefits include load balancing/speed/reliability.
-
-- With system DNS (umich): `host google.com`
-- With alternate (OpenDNS): `host google.com 208.67.222.222`
-- So why use one DNS server over another? Your computer is always
-  translating domain names. Speed is important.
-    - Your computer keeps a cache and DNS servers keep a cache (explain TTL)
+- We want to get to google.com, but computers don't understand google.com, they
+  understand numbers. Humans don't like numbers. What protocol helps us get
+  there?
+- `nslookup google.com`
+    - Where did it get this server? When you connect to a network you
+        automatically get some DNS servers. 
+    - `cat /etc/resolv.conf`
+    - There are many DNS servers. What happens if we use a different one?
+    - `nslookup google.com 208.67.222.222`
+- Non-authoritative answer: I don't know, ask somebody else:
+    - Recursively! If we take a DNS name backwards:
+        - com registry knows who has data for google
+        - google nameserver knows what www is
+        - www is nothing special
+        - who knows who com is?
+        - distributed 13 'root zone servers'
+        - `dig +trace www.google.com`
+        - This is the authoritative answer!
 
 One way or another we get an IP address for Google.
 
 ## Routing
-Now you have Google's IP address. How do we get to Google?
-
-1. `traceroute google.com`
-    - We end up at `1e100.net` what on earth is that? `whois 1e100.net | less`
-    - *Meta:* quick Google search: "1e100.net is a Google-owned domain name used
-      to identify the servers in our network. Following standard industry
-      practice, we make sure each IP address has a corresponding hostname."
-    - Dissect this: some IPs in UM network (we see the DNS names) then out to
-      [the Internet](http://www.itcom.itd.umich.edu/backbone/)
-2. This is all great, but how did we know to get there? `netstat -nr`
-    - Google goes out the default system route, the default route contains a
-      bigger routing table and eventually through all of those hops we end up at
-      Google.
-3. __TODO:__ How does the DNS server know where to go? (do I even bother talking
-   about this?)
-    - Domain name registration/registrars
-    - ICANN/DNS root zone
-    - Nameservers
+- Now we have this IP address. How do we get there?
+- `traceroute google.com`
+    - `whois 1e100.net | less`
+- But how did it know to get there?
+    - Same concept as DNS we recursively go until we know what to do.
+- `route -n get google.com`
+    - Show umich 35.2.0.1 
+    - UMnet backbone map, Merit = comcast
+- `netstat -nr`
 
 ## Response
 Our request arrives at Google's servers. They do whatever sort of backend
@@ -96,13 +113,9 @@ can use to rudimentarily/interactively follow the TCP stream:
 This is a cute way to see that computers just communicate with other computers
 across the Internet in predetermined ways, it's nothing special.
 
-__TODO:__ What problems come along with this?
+## Extra material
 
-__TODO:__ Needs a transition/conclusion
-
-## OSI Model
-__TODO:__ where to put this/tie it in?
-
+### OSI Model
 - Layer 7: Application (DNS, FTP, HTTP, NTP)
 - Layer 6: Presentation ()
 - Layer 5: Session ()
@@ -125,24 +138,7 @@ the dumber the technologies are.
 TCP makes sure the user doesn't have to deal with this, so that's why protocols
 like HTTP are implemented on top of it.
 
-## Serving simple HTTP requests
-__TODO:__ Don't think I want this example. 
-
-Let's make our own HTTP server:
-
-    cd Desktop
-    mkdir website
-    echo "<h1>Hi c4cs!</h1>" > index.html
-    python -m SimpleHTTPServer
-
-Navigate to localhost in Chrome. Oh no, it didn't work! SimpleHTTPServer runs on
-8000 by default, could be a nice segue into L7 versus L4.
-
-## To add
-- Spots for student questions
-- Bridge in OSI model more
-
-## To consider
+### To consider
 - DNS is nothing special, just another L7 service
 - Firewalls/NAT/private network routing
     - ARP
